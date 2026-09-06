@@ -1,23 +1,265 @@
 {
   "name": "decipher",
-  "displayName": "decipher",
-  "description": "Voice-driven codebase explainer for VS Code",
+  "displayName": "Decipher",
+  "description": "Voice-driven codebase explainer for VS Code, like a senior dev talking through it.",
   "version": "0.0.1",
+  "publisher": "sanjanapodduturi",
+  "icon": "TODO",
+  "galleryBanner": {
+    "color": "1a1a2e",
+    "theem": "dark"
+  },
   "engines": {
-    "vscode": "^1.136.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
+    "Education",
     "Other"
   ],
-  "activationEvents": [],
+  "keywords": ["ai", "voice", "codebase", "explainer", "onboarding", "claude", "openai", "whisper", "elevenlabs"],
+  "activationEvents": [
+    "onCommand:decipher.explainSelection",
+    "onCommand:decipher.explainFile",
+    "onCommand:decipher.askQuestion",
+    "onCommand:decipher.askQuestionVoice"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "decipher.helloWorld",
-        "title": "Hello World"
+        "command": "decipher.explainSelection",
+        "title": "Decipher: Explain Selected Code",
+        "category": "Decipher",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "decipher.explainFile",
+        "title": "Decipher: Explain this file",
+        "category": "Decipher",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "decipher.askQuestion",
+        "title": "Decipher:Ask a Question",
+        "category": "Decipher",
+        "icon": "$(question)"
+      },
+      {
+        "command": "decipher.askQuestionVoice",
+        "title": "Decipher: Ask a Question (Voice)",
+        "category": "Decipher",
+        "icon": "$(mic)"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "decipher.explainSelection",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "decipher.explainFile",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "decipher.askQuestion",
+        "key": "ctrl+shift+q",
+        "mac": "cmd+shift+q",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "decipher.askQuestionVoice",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration":{
+      "title": "Decipher",
+      "properties": {
+        "decipher.llmProvider": {
+          "type": "string",
+          "default": "anthropic",
+          "markdownDescription": "LLM provider for generating explanations. Supported: `anthropic`. Add the matching API below.",
+          "order": 1
+        },
+        "decipher.llmApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected LLM provider. Required.",
+          "secret": true,
+          "order": 2
+        },
+        "decipher.llmModel": {
+          "type": "string",
+          "default": "claude-sonnet-5",
+          "markdownDescription": "Model ID for the selected LLM provider. Anthropics defaults: `claude-sonnet-5` (balanced), `claude-opus-5` (thorough), `claude-haiku-4-5-20251001` (fastest) . See all at [platform.claude.com/docs/en/models/overview](https://platform.claude.com/docs/en/models/overview).",
+          "order": 3
+        },
+        "decipher.llmMaxTokens": {
+          "type": "number",
+          "default": 1024,
+          "minimum": 256,
+          "maximum": 4096,
+          "description": "Maximum tokens the LLM can use per explanation. Higher = more detailed but slower and vice-versa.",
+          "order": 4
+        },
+        "decipher.sttProvider": {
+          "type": "string",
+          "default": "openai",
+          "markdownDescription": "Speech-to-text provider for voice input. Supported: `openai`.",
+          "order": 5
+        },
+        "decipher.sttApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for selected speech-to-text provider. Required for voice input.",
+          "secret": true,
+          "order": 6
+        },
+        "decipher.sttModel": {
+          "type": "string",
+          "default": "whisper-1",
+          "markdownDescription": "Model ID for the selected STT provider. e.g. `whisper-1` (OpenAI). Check your provider's docs for available models.",
+          "order": 7
+        },
+        "decipher.sttLanguage": {
+          "type": "string",
+          "default": "en",
+          "description": "Language hint for transcription (ISO-639-1 code, e.g. 'en', 'fr', 'de').",
+          "order": 8
+        },
+        "decipher.inputMode": {
+          "type": "string",
+          "enum": ["text", "voice"],
+          "enumDescriptions": [
+            "Type questions using the input box.",
+            "Ask questions using the microphone, transcribed by the STT provider"
+          ],
+          "default": "text",
+          "description": "How you want to input questions to Decipher.",
+          "order": 9
+        },
+        "decipher.ttsProvider": {
+          "type": "string",
+          "default": "elevenLabs",
+          "markdownDescription": "Text-to-speech provider for voice input. Supported: `elevenlabs`",
+          "order": 10
+        },
+        "decipher.ttsApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected TTS provider. Required - Decipher always speaks its explanations.",
+          "secret": true,
+          "order": 11
+        },
+        "decipher.ttsModel": {
+          "type": "string",
+          "default": "eleven_turbo_v2_5",
+          "markdownDescription": "Model ID for the selected TTS provider. e.g. `eleven_turbo_v2_5` (ElevenLabs). Check your provider's docs for available models.",
+          "order": 12
+        },
+        "decipher.ttsVoiceId": {
+          "type": "string",
+          "default": "21m00Tcm4TlvDq8ikWAM",
+          "description": "Voice ID for the selected TTS provider. Default is ElevenLabs 'Rachel' - calm and clear, well-suited for technical narration. Browse ElevenLabs voices at elevenlabs.io/voice-library.",
+          "order": 13
+        },
+        "decipher.ttsStability": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Voice stability (0-1). Lower = more expressive and varied. Higher = more consistent. Behavior varies by provider.",
+          "order": 14
+        },
+        "decipher.ttsSimilarityBoost": {
+          "type": "number",
+          "default": 0.75,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Similarity boost (0-1). Higher = closer to the original voice profile. Behavior varies by provider.",
+          "order": 15
+        },
+        "decipher.highlightEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight relevant code lines in the editor while Decipher explains them.",
+          "order": 16
+        },
+        "decipher.highlightColor": {
+          "type": "string",
+          "default": "rgba(255, 200, 0, 0.15)",
+          "description": "Background color for code highlights during explanation (CSS rgba value).",
+          "order": 17
+        },
+        "decipher.outputChannel": {
+          "type": "string",
+          "enum": ["panel", "notification", "both"],
+          "enumDescriptions": [
+            "Voice output only, with transcript in the Decipher panel.",
+            "Voice output plus a VS Code notification with the explanation summary.",
+            "Show both the panel and a notification."
+          ],
+          "default": "panel",
+          "description": "Where Decipher displays its text explanations alongside voice output.",
+          "order": 18
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "decipher.explainSelection",
+          "when": "editorHasSelection",
+          "group": "decipher@1"
+        },
+        {
+          "command": "decipher.explainFile",
+          "when": "editorTextFocus",
+          "group": "decipher@2"
+        },
+        {
+          "command": "decipher.askQuestion",
+          "when": "editorTextFocus",
+          "group": "decipher@3"
+        },
+        {
+          "command": "decipher.askQuestionVoice",
+          "when": "editorTextFocus",
+          "group": "decipher@4"
+        }
+      ],
+      "editor/title":[
+        {
+          "command": "decipher.explainFile",
+          "when": "editorTextFocus",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "decipher",
+          "title": "Decipher",
+          "icon": "TODO"
+        }
+      ]
+    },
+    "views": {
+      "decipher": [
+        {
+          "id": "decipher.historyView",
+          "name": "Explanation History",
+          "type": "webview",
+          "icon": "TODO"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
